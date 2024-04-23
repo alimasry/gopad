@@ -1,6 +1,3 @@
-// this code is heavily inspired by the gorilla websocket chat example
-// https://github.com/gorilla/websocket/blob/main/examples/chat/hub.go
-
 package ws
 
 import "sync"
@@ -17,7 +14,8 @@ var (
 	once        sync.Once
 )
 
-func InitializeHub() {
+// initialize the hub instance
+func initializeHub() {
 	once.Do(func() {
 		hubInstance = &Hub{
 			clients:    make(ClientList),
@@ -28,13 +26,14 @@ func InitializeHub() {
 	})
 }
 
+// get the hub instance and initialize it if it's not
 func GetHubInstance() *Hub {
-	InitializeHub()
+	initializeHub()
 	return hubInstance
 }
 
+// runs a loop that registers / unregisters clients as well as handle broadcast events
 func (h *Hub) Run() {
-	InitializeHub()
 	for {
 		select {
 		case client := <-h.register:
@@ -53,6 +52,7 @@ func (h *Hub) Run() {
 	}
 }
 
+// remove client from the hub
 func (h *Hub) removeClient(client *Client) {
 	if _, ok := h.clients[client.UUID][client]; ok {
 		delete(h.clients[client.UUID], client)
@@ -64,6 +64,7 @@ func (h *Hub) removeClient(client *Client) {
 	}
 }
 
+// add client to the hub
 func (h *Hub) addClient(client *Client) {
 	if _, ok := h.clients[client.UUID]; !ok {
 		h.clients[client.UUID] = make(map[*Client]bool)

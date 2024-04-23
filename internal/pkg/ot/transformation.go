@@ -9,7 +9,6 @@ type OTransformation struct {
 }
 
 // Transforms the first operation index so that it would resolve conflicts between updates from different clients
-
 func Transform(ot1, ot2 *OTransformation) {
 	if ot1.Position-ot1.Delete > ot2.Position-ot2.Delete ||
 		(ot1.Position-ot1.Delete == ot2.Position-ot2.Delete && !order(*ot1, *ot2)) {

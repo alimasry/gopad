@@ -13,12 +13,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var Hub *ws.Hub
-
 func Run() {
 	// run the websocket hub loop to handle sending
-	Hub = ws.GetHubInstance()
-	go Hub.Run()
+	hub := ws.GetHubInstance()
+	go hub.Run()
 
 	// run the operational transformation processing loop
 	otbm := ot.GetOTBufferManager()
