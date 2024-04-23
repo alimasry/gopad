@@ -16,6 +16,7 @@ type DocumentEdit struct {
 type MoveCursorData struct {
 	Position int `json:"position"`
 }
+
 type InsertData struct {
 	Text string `json:"text"`
 }

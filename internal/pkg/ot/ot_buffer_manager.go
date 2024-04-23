@@ -1,7 +1,6 @@
 package ot
 
 import (
-	"log"
 	"sync"
 )
 
@@ -14,6 +13,7 @@ var (
 	once                    sync.Once
 )
 
+// initialize the buffer manager only once
 func initializeBufferManager() {
 	once.Do(func() {
 		otBuffermanagerInstance = &OTBufferManager{
@@ -22,11 +22,13 @@ func initializeBufferManager() {
 	})
 }
 
+// returns the current OTBufferManager and creates on if it isn't created
 func GetOTBufferManager() *OTBufferManager {
 	initializeBufferManager()
 	return otBuffermanagerInstance
 }
 
+// returns the OTBuffer given the documentUUID and creates one if it doesn't exists
 func (otbm *OTBufferManager) GetOTBuffer(documentUUID string) *OTBuffer {
 	otBuffer, ok := otbm.OTBuffers[documentUUID]
 	if !ok {
@@ -36,8 +38,8 @@ func (otbm *OTBufferManager) GetOTBuffer(documentUUID string) *OTBuffer {
 	return otBuffer
 }
 
+// The loop that process pending transformation for all the documents
 func (otbm *OTBufferManager) ProcessTransformations() {
-	log.Print("processing transformations...")
 	for {
 		for uuid := range otbm.OTBuffers {
 			otbm.OTBuffers[uuid].process()

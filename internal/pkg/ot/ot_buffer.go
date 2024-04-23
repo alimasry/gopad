@@ -18,8 +18,9 @@ type OTBuffer struct {
 	sync.RWMutex
 }
 
+// creates a new OTBuffer
 func NewOTBuffer(documentUUID string) *OTBuffer {
-	document := editor.GetDocumentFromMap(documentUUID)
+	document := editor.GetDocumentFromCache(documentUUID)
 
 	return &OTBuffer{
 		UUID:      document.UUID,
@@ -29,6 +30,7 @@ func NewOTBuffer(documentUUID string) *OTBuffer {
 	}
 }
 
+// push a transformation to the list of pending transformation so that it could be processed
 func (otb *OTBuffer) PushTransformation(t OTransformation) {
 	otb.Lock()
 	defer otb.Unlock()
@@ -40,10 +42,12 @@ func (otb *OTBuffer) PushTransformation(t OTransformation) {
 	otb.Pending = append(otb.Pending, t)
 }
 
+// get current content of the document
 func (otb *OTBuffer) Content() string {
 	return otb.gapBuffer.String()
 }
 
+// save the document to the database
 func (otb *OTBuffer) save() error {
 	document, err := editor.GetDocument(otb.UUID)
 	if err != nil {
@@ -64,6 +68,7 @@ func (otb *OTBuffer) save() error {
 	return nil
 }
 
+// Process transformations related to that buffer
 func (otb *OTBuffer) process() {
 	if len(otb.Pending) == 0 {
 		return

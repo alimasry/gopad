@@ -7,20 +7,24 @@ import (
 	"github.com/alimasry/gopad/internal/models"
 )
 
-var DocumentMap = make(map[string]models.Document)
+// Cache for the loaded documents so that they could be retrieved quickly
+// TODO: find better way to make this caching
+var DocumentCache = make(map[string]models.Document)
 
-func GetDocument(documentUuid string) (*models.Document, error) {
+// gets document from database
+func GetDocument(documentUUID string) (*models.Document, error) {
 	db := database.GetDb()
 
 	var response models.Document
 
-	if err := db.Model(&models.Document{}).Where("uuid = ?", documentUuid).Find(&response).Error; err != nil {
+	if err := db.Model(&models.Document{}).Where("uuid = ?", documentUUID).Find(&response).Error; err != nil {
 		return nil, fmt.Errorf("failed to retrieve document : %v", err)
 	}
 
 	return &response, nil
 }
 
+// save document to database
 func SaveDocument(document models.Document) error {
 	db := database.GetDb()
 
@@ -40,16 +44,17 @@ func SaveDocument(document models.Document) error {
 		return err
 	}
 
-	DocumentMap[document.UUID] = document
+	DocumentCache[document.UUID] = document
 
 	return tx.Commit().Error
 }
 
-func GetDocumentFromMap(uuid string) models.Document {
-	document, ok := DocumentMap[uuid]
+// get document from cache and add it if it isn't there
+func GetDocumentFromCache(uuid string) models.Document {
+	document, ok := DocumentCache[uuid]
 	if !ok {
 		document, _ := GetDocument(uuid)
-		DocumentMap[uuid] = *document
+		DocumentCache[uuid] = *document
 	}
 	return document
 }

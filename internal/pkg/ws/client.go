@@ -41,6 +41,7 @@ type Client struct {
 	lastSyncedVersion int
 }
 
+// creates a new websocket client
 func NewClient(uuid string, conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
 		UUID: uuid,
@@ -50,6 +51,7 @@ func NewClient(uuid string, conn *websocket.Conn, hub *Hub) *Client {
 	}
 }
 
+// receives messages from the client
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -76,6 +78,7 @@ func (c *Client) readPump() {
 	}
 }
 
+// sends messages to the client
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	syncTicker := time.NewTicker(syncPeriod)
@@ -110,7 +113,7 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-syncTicker.C:
-			document := editor.GetDocumentFromMap(c.UUID)
+			document := editor.GetDocumentFromCache(c.UUID)
 
 			if c.lastSyncedVersion == document.Version {
 				continue
@@ -133,6 +136,7 @@ func (c *Client) writePump() {
 	}
 }
 
+// handles the ws endpoint
 func ServeWs(c *gin.Context) {
 	hub := GetHubInstance()
 

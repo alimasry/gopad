@@ -3,8 +3,6 @@ package ws
 import (
 	"encoding/json"
 	"log"
-
-	"github.com/alimasry/gopad/internal/pkg/ot"
 )
 
 var (
@@ -29,6 +27,7 @@ type DeleteData struct {
 	Delete   int `json="delete"`
 }
 
+// route incoming events to their handler functions
 func routeEvent(event Event) {
 	switch event.Command {
 	case InsertEvent:
@@ -44,22 +43,4 @@ func routeEvent(event Event) {
 		}
 		handleDelete(event.UUID, deleteData)
 	}
-}
-
-func handleInsert(uuid string, insertData InsertData) {
-	otBufferManager := ot.GetOTBufferManager()
-	otBuffer := otBufferManager.GetOTBuffer(uuid)
-	otBuffer.PushTransformation(ot.OTransformation{
-		Position: insertData.Position,
-		Insert:   insertData.String,
-	})
-}
-
-func handleDelete(uuid string, deleteData DeleteData) {
-	otBufferManager := ot.GetOTBufferManager()
-	otBuffer := otBufferManager.GetOTBuffer(uuid)
-	otBuffer.PushTransformation(ot.OTransformation{
-		Position: deleteData.Position,
-		Delete:   deleteData.Delete,
-	})
 }

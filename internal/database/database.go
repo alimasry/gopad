@@ -18,7 +18,8 @@ var (
 	once    sync.Once
 )
 
-func createTables(db *gorm.DB) {
+// creates the database tables and run migrations
+func migrateTables(db *gorm.DB) {
 	if err := db.AutoMigrate(&models.Document{}); err != nil {
 		log.Fatalf("Can't create table documents: %v", err)
 	}
@@ -27,6 +28,7 @@ func createTables(db *gorm.DB) {
 	}
 }
 
+// initialize the database
 func initializeDb() {
 	// Get database credentials from environment variables
 	dbHost := os.Getenv("DB_HOST")
@@ -50,13 +52,15 @@ func initializeDb() {
 	}
 }
 
+// get the database and initialize it if it's not
 func GetDb() *gorm.DB {
 	once.Do(initializeDb)
 	return db
 }
 
+// creates the tables and does the migrations
 func Init() error {
 	db := GetDb()
-	createTables(db)
+	migrateTables(db)
 	return dbError
 }
