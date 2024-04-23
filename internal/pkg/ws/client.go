@@ -41,6 +41,7 @@ type Client struct {
 	lastSyncedVersion int
 }
 
+// creates a new websocket client
 func NewClient(uuid string, conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
 		UUID: uuid,
@@ -50,6 +51,7 @@ func NewClient(uuid string, conn *websocket.Conn, hub *Hub) *Client {
 	}
 }
 
+// receives messages from the client
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -76,12 +78,13 @@ func (c *Client) readPump() {
 	}
 }
 
+// sends messages to the client
 func (c *Client) writePump() {
-	ticker := time.NewTicker(pingPeriod)
+	pingTicker := time.NewTicker(pingPeriod)
 	syncTicker := time.NewTicker(syncPeriod)
 
 	defer func() {
-		ticker.Stop()
+		pingTicker.Stop()
 		syncTicker.Stop()
 		c.conn.Close()
 	}()
@@ -104,35 +107,40 @@ func (c *Client) writePump() {
 			if err != nil {
 				log.Printf("error : %v", err)
 			}
-		case <-ticker.C:
+		case <-pingTicker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		case <-syncTicker.C:
-			document := editor.GetDocumentFromMap(c.UUID)
-
-			if c.lastSyncedVersion == document.Version {
-				continue
-			}
-
-			syncData, err := json.Marshal(document)
-			if err != nil {
-				log.Printf("error: %v", err)
-			}
-
-			c.lastSyncedVersion = document.Version
-
-			c.send <- &Event{
-				Command: SyncEvent,
-				UUID:    c.UUID,
-				Data:    syncData,
-			}
+			c.syncIfChanged()
 		}
 
 	}
 }
 
+func (c *Client) syncIfChanged() {
+	document := editor.GetDocumentFromCache(c.UUID)
+
+	if c.lastSyncedVersion == document.Version {
+		return
+	}
+
+	syncData, err := json.Marshal(document)
+	if err != nil {
+		log.Printf("error: %v", err)
+	}
+
+	c.lastSyncedVersion = document.Version
+
+	c.send <- &Event{
+		Command: SyncEvent,
+		UUID:    c.UUID,
+		Data:    syncData,
+	}
+}
+
+// handles the ws endpoint
 func ServeWs(c *gin.Context) {
 	hub := GetHubInstance()
 
