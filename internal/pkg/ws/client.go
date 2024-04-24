@@ -7,6 +7,7 @@ import (
 
 	"github.com/alimasry/gopad/internal/services/editor"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -34,20 +35,22 @@ var upgrader = websocket.Upgrader{
 type ClientList map[string]map[*Client]bool
 
 type Client struct {
-	UUID              string
+	ReplicaId         string
 	conn              *websocket.Conn
 	hub               *Hub
 	send              chan *Event
+	documentUUID      string
 	lastSyncedVersion int
 }
 
 // creates a new websocket client
-func NewClient(uuid string, conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(documentUUID string, conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
-		UUID: uuid,
-		conn: conn,
-		hub:  hub,
-		send: make(chan *Event, 256),
+		ReplicaId:    uuid.NewString(),
+		conn:         conn,
+		hub:          hub,
+		documentUUID: documentUUID,
+		send:         make(chan *Event, 256),
 	}
 }
 
@@ -57,9 +60,11 @@ func (c *Client) readPump() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
+
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -69,13 +74,20 @@ func (c *Client) readPump() {
 			break
 		}
 
-		var event Event
-		if err := json.Unmarshal(message, &event); err != nil {
-			log.Printf("error: %v", err)
-		}
-
-		routeEvent(event)
+		c.routeMessage(message)
 	}
+}
+
+func (c *Client) routeMessage(message []byte) {
+	var event Event
+
+	if err := json.Unmarshal(message, &event); err != nil {
+		log.Printf("error: %v", err)
+	}
+
+	event.client = c
+
+	routeEvent(event)
 }
 
 // sends messages to the client
@@ -120,7 +132,7 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) syncIfChanged() {
-	document := editor.GetDocumentFromCache(c.UUID)
+	document := editor.GetDocumentFromCache(c.documentUUID)
 
 	if c.lastSyncedVersion == document.Version {
 		return
@@ -135,8 +147,8 @@ func (c *Client) syncIfChanged() {
 
 	c.send <- &Event{
 		Command: SyncEvent,
-		UUID:    c.UUID,
 		Data:    syncData,
+		client:  c,
 	}
 }
 
@@ -150,9 +162,9 @@ func ServeWs(c *gin.Context) {
 		return
 	}
 
-	uuid := c.Param("document_uuid")
+	documentUUID := c.Param("document_uuid")
 
-	client := NewClient(uuid, conn, hub)
+	client := NewClient(documentUUID, conn, hub)
 	client.hub.register <- client
 
 	go client.writePump()

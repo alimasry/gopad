@@ -41,7 +41,7 @@ func (h *Hub) Run() {
 		case client := <-h.unregister:
 			h.removeClient(client)
 		case event := <-h.broadcast:
-			for client := range h.clients[event.UUID] {
+			for client := range h.clients[event.client.documentUUID] {
 				select {
 				case client.send <- event:
 				default:
@@ -54,20 +54,20 @@ func (h *Hub) Run() {
 
 // remove client from the hub
 func (h *Hub) removeClient(client *Client) {
-	if _, ok := h.clients[client.UUID][client]; ok {
-		delete(h.clients[client.UUID], client)
+	if _, ok := h.clients[client.documentUUID][client]; ok {
+		delete(h.clients[client.documentUUID], client)
 		close(client.send)
 
 		if len(h.clients) == 0 {
-			delete(h.clients, client.UUID)
+			delete(h.clients, client.documentUUID)
 		}
 	}
 }
 
 // add client to the hub
 func (h *Hub) addClient(client *Client) {
-	if _, ok := h.clients[client.UUID]; !ok {
-		h.clients[client.UUID] = make(map[*Client]bool)
+	if _, ok := h.clients[client.documentUUID]; !ok {
+		h.clients[client.documentUUID] = make(map[*Client]bool)
 	}
-	h.clients[client.UUID][client] = true
+	h.clients[client.documentUUID][client] = true
 }

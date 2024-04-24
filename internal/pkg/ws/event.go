@@ -12,8 +12,8 @@ var (
 )
 
 type Event struct {
+	client  *Client         `json="client"`
 	Command string          `json="command"`
-	UUID    string          `json="uuid"`
 	Data    json.RawMessage `json="data"`
 }
 
@@ -35,12 +35,12 @@ func routeEvent(event Event) {
 		if err := json.Unmarshal(event.Data, &insertData); err != nil {
 			log.Printf("error: %v", err)
 		}
-		handleInsert(event.UUID, insertData)
+		handleInsert(event.client, insertData)
 	case DeleteEvent:
 		var deleteData DeleteData
 		if err := json.Unmarshal(event.Data, &deleteData); err != nil {
 			log.Printf("error: %v", err)
 		}
-		handleDelete(event.UUID, deleteData)
+		handleDelete(event.client, deleteData)
 	}
 }

@@ -1,23 +1,32 @@
 package ws
 
-import "github.com/alimasry/gopad/internal/pkg/ot"
+import (
+	"log"
+
+	"github.com/alimasry/gopad/internal/pkg/ot"
+)
 
 // handle incoming insert events
-func handleInsert(uuid string, insertData InsertData) {
+func handleInsert(client *Client, insertData InsertData) {
+	log.Printf("client : %v", client)
 	otBufferManager := ot.GetOTBufferManager()
-	otBuffer := otBufferManager.GetOTBuffer(uuid)
+	otBuffer := otBufferManager.GetOTBuffer(client.documentUUID)
 	otBuffer.PushTransformation(ot.OTransformation{
-		Position: insertData.Position,
-		Insert:   insertData.String,
+		Position:  insertData.Position,
+		Insert:    insertData.String,
+		Version:   client.lastSyncedVersion,
+		ReplicaId: client.ReplicaId,
 	})
 }
 
 // handle incoming delete events
-func handleDelete(uuid string, deleteData DeleteData) {
+func handleDelete(client *Client, deleteData DeleteData) {
 	otBufferManager := ot.GetOTBufferManager()
-	otBuffer := otBufferManager.GetOTBuffer(uuid)
+	otBuffer := otBufferManager.GetOTBuffer(client.documentUUID)
 	otBuffer.PushTransformation(ot.OTransformation{
-		Position: deleteData.Position,
-		Delete:   deleteData.Delete,
+		Position:  deleteData.Position,
+		Delete:    deleteData.Delete,
+		Version:   client.lastSyncedVersion,
+		ReplicaId: client.ReplicaId,
 	})
 }
