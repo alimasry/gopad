@@ -25,7 +25,8 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 
-	syncPeriod = 500 * time.Millisecond
+	// Time before documents are resynced
+	syncWait = 500 * time.Millisecond
 )
 
 var upgrader = websocket.Upgrader{
@@ -97,7 +98,7 @@ func (c *Client) routeMessage(message []byte) {
 // sends messages to the client
 func (c *Client) writePump() {
 	pingTicker := time.NewTicker(pingPeriod)
-	syncTicker := time.NewTicker(syncPeriod)
+	syncTicker := time.NewTicker(syncWait)
 
 	defer func() {
 		pingTicker.Stop()

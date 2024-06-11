@@ -4,9 +4,10 @@ import (
 	"github.com/alimasry/gopad/internal/pkg/ot"
 )
 
+var otBufferManager *ot.OTBufferManager = ot.GetOTBufferManager()
+
 // handle incoming insert events
 func handleInsert(client *Client, insertData InsertData) {
-	otBufferManager := ot.GetOTBufferManager()
 	otBuffer := otBufferManager.GetOTBuffer(client.documentUUID)
 	otBuffer.PushTransformation(ot.OTransformation{
 		Position:  insertData.Position,
@@ -18,7 +19,6 @@ func handleInsert(client *Client, insertData InsertData) {
 
 // handle incoming delete events
 func handleDelete(client *Client, deleteData DeleteData) {
-	otBufferManager := ot.GetOTBufferManager()
 	otBuffer := otBufferManager.GetOTBuffer(client.documentUUID)
 	otBuffer.PushTransformation(ot.OTransformation{
 		Position:  deleteData.Position,

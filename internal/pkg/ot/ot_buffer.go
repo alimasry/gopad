@@ -61,7 +61,7 @@ func (otb *OTBuffer) save() error {
 	document.Version = otb.Version + 1
 	document.Content = otb.Content()
 
-	err = editor.SaveDocument(*document)
+	err = editor.SaveDocument(document)
 
 	if err != nil {
 		return err
@@ -92,5 +92,7 @@ func (otb *OTBuffer) process() {
 
 	otb.Pending = make([]OTransformation, 0)
 
-	otb.save()
+	if err := otb.save(); err != nil {
+		log.Println("Error occured: ", err)
+	}
 }
