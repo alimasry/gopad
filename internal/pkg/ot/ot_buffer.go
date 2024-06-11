@@ -22,7 +22,7 @@ type OTBuffer struct {
 func NewOTBuffer(documentUUID string) *OTBuffer {
 	document, err := editor.GetDocumentFromCache(documentUUID)
 
-	if err == editor.ErrDocumentNotFound {
+	if err != nil {
 		log.Println("Error occured", err.Error())
 	}
 

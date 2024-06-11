@@ -17,6 +17,8 @@ func HandleViewDocument(c *gin.Context) {
 
 	if err == editor.ErrDocumentNotFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	} else if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
 	c.HTML(http.StatusOK, "editor.html", document)
@@ -48,7 +50,7 @@ func HandleCreateDocument(c *gin.Context) {
 
 	err := editor.SaveDocument(document)
 
-	if err == editor.ErrFailedToRetriefDocument {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

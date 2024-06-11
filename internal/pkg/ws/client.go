@@ -138,7 +138,7 @@ func (c *Client) writePump() {
 func (c *Client) syncIfChanged() {
 	document, err := editor.GetDocumentFromCache(c.documentUUID)
 
-	if err == editor.ErrDocumentNotFound {
+	if err != nil {
 		log.Println("Error occured", err.Error())
 	}
 
