@@ -1,14 +1,11 @@
 package ws
 
 import (
-	"log"
-
 	"github.com/alimasry/gopad/internal/pkg/ot"
 )
 
 // handle incoming insert events
 func handleInsert(client *Client, insertData InsertData) {
-	log.Printf("client : %v", client)
 	otBufferManager := ot.GetOTBufferManager()
 	otBuffer := otBufferManager.GetOTBuffer(client.documentUUID)
 	otBuffer.PushTransformation(ot.OTransformation{

@@ -33,13 +33,13 @@ func routeEvent(event Event) {
 	case InsertEvent:
 		var insertData InsertData
 		if err := json.Unmarshal(event.Data, &insertData); err != nil {
-			log.Printf("error: %v", err)
+			log.Println("Error occured", err.Error())
 		}
 		handleInsert(event.client, insertData)
 	case DeleteEvent:
 		var deleteData DeleteData
 		if err := json.Unmarshal(event.Data, &deleteData); err != nil {
-			log.Printf("error: %v", err)
+			log.Println("Error occured", err.Error())
 		}
 		handleDelete(event.client, deleteData)
 	}

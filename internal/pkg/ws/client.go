@@ -73,7 +73,7 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Println("Error occured", err.Error())
 			}
 			break
 		}
@@ -86,7 +86,7 @@ func (c *Client) routeMessage(message []byte) {
 	var event Event
 
 	if err := json.Unmarshal(message, &event); err != nil {
-		log.Printf("error: %v", err)
+		log.Println("Error occured", err.Error())
 	}
 
 	event.client = c
@@ -116,12 +116,12 @@ func (c *Client) writePump() {
 
 			message, err := json.Marshal(event)
 			if err != nil {
-				log.Printf("error : %v", err)
+				log.Println("Error occured", err.Error())
 			}
 
 			err = c.conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
-				log.Printf("error : %v", err)
+				log.Println("Error occured", err.Error())
 			}
 		case <-pingTicker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -136,7 +136,11 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) syncIfChanged() {
-	document := editor.GetDocumentFromCache(c.documentUUID)
+	document, err := editor.GetDocumentFromCache(c.documentUUID)
+
+	if err == editor.ErrDocumentNotFound {
+		log.Println("Error occured", err.Error())
+	}
 
 	if c.lastSyncedVersion == document.Version {
 		return
@@ -144,7 +148,7 @@ func (c *Client) syncIfChanged() {
 
 	syncData, err := json.Marshal(document)
 	if err != nil {
-		log.Printf("error: %v", err)
+		log.Println("Error occured", err.Error())
 	}
 
 	c.lastSyncedVersion = document.Version
@@ -162,7 +166,7 @@ func ServeWs(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Error occured", err)
 		return
 	}
 

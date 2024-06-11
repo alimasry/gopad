@@ -20,7 +20,11 @@ type OTBuffer struct {
 
 // creates a new OTBuffer
 func NewOTBuffer(documentUUID string) *OTBuffer {
-	document := editor.GetDocumentFromCache(documentUUID)
+	document, err := editor.GetDocumentFromCache(documentUUID)
+
+	if err == editor.ErrDocumentNotFound {
+		log.Println("Error occured", err.Error())
+	}
 
 	return &OTBuffer{
 		UUID:      document.UUID,
@@ -88,7 +92,5 @@ func (otb *OTBuffer) process() {
 
 	otb.Pending = make([]OTransformation, 0)
 
-	if err := otb.save(); err != nil {
-		log.Printf("Failed to save document %v", err)
-	}
+	otb.save()
 }

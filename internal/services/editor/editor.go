@@ -1,10 +1,17 @@
 package editor
 
 import (
-	"fmt"
+	"errors"
+	"log"
 
 	"github.com/alimasry/gopad/internal/database"
 	"github.com/alimasry/gopad/internal/models"
+)
+
+var (
+	ErrDocumentNotFound        = errors.New("document not found")
+	ErrFailedToRetriefDocument = errors.New("failed to retrieve document")
+	ErrFailedToSaveDocument    = errors.New("failed to save document")
 )
 
 // Cache for the loaded documents so that they could be retrieved quickly
@@ -18,7 +25,8 @@ func GetDocument(documentUUID string) (*models.Document, error) {
 	var response models.Document
 
 	if err := db.Model(&models.Document{}).Where("uuid = ?", documentUUID).Find(&response).Error; err != nil {
-		return nil, fmt.Errorf("failed to retrieve document : %v", err)
+		log.Println("Error occured: ", err)
+		return nil, ErrFailedToRetriefDocument
 	}
 
 	return &response, nil
@@ -31,8 +39,9 @@ func SaveDocument(document models.Document) error {
 	tx := db.Begin()
 
 	if err := tx.Save(&document).Error; err != nil {
+		log.Println("Error occured: ", err.Error())
 		tx.Rollback()
-		return err
+		return ErrFailedToSaveDocument
 	}
 
 	document_version := models.DocumentVersion{
@@ -40,8 +49,9 @@ func SaveDocument(document models.Document) error {
 	}
 
 	if err := tx.Create(&document_version).Error; err != nil {
+		log.Println("Error occured: ", err.Error())
 		tx.Rollback()
-		return err
+		return ErrFailedToSaveDocument
 	}
 
 	DocumentCache[document.UUID] = document
@@ -50,11 +60,14 @@ func SaveDocument(document models.Document) error {
 }
 
 // get document from cache and add it if it isn't there
-func GetDocumentFromCache(uuid string) models.Document {
+func GetDocumentFromCache(uuid string) (models.Document, error) {
 	document, ok := DocumentCache[uuid]
 	if !ok {
-		document, _ := GetDocument(uuid)
+		document, err := GetDocument(uuid)
+		if err != nil {
+			return models.Document{}, ErrDocumentNotFound
+		}
 		DocumentCache[uuid] = *document
 	}
-	return document
+	return document, nil
 }
