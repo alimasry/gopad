@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16
+    container_name: postgres_db
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    restart: always
+
+  app:
+    image: golang:1.22.4
+    container_name: gopad_app
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/go/src/app
+    working_dir: /go/src/app
+    command: ["go", "run", "cmd/app/main.go"]
+    environment:
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    restart: unless-stopped
+
+# this is used to persist data even if the postgres container is removed or stopped
+# it is mapped by starting services/db/volumes with "postgres_data:..."
+volumes:
+  postgres_data:

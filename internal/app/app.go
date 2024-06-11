@@ -2,7 +2,6 @@ package app
 
 import (
 	"log"
-	"os"
 
 	"github.com/alimasry/gopad/internal/database"
 	"github.com/alimasry/gopad/internal/pkg/ot"
@@ -32,12 +31,10 @@ func Run() {
 		log.Fatal(err)
 	}
 
-	port := os.Getenv("APP_PORT")
-
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 
 	rest.AddRoutes(router)
 
-	router.Run(":" + port)
+	router.Run(":8080")
 }
