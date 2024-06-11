@@ -43,8 +43,6 @@ func HandleCreateDocument(c *gin.Context) {
 	document := models.Document{
 		UUID:    uuid.NewString(),
 		Title:   body.Title,
-		Content: body.Content,
-		Size:    len(body.Content),
 		Version: 1,
 	}
 

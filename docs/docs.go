@@ -54,9 +54,6 @@ const docTemplate = `{
         "models.CreateDocumentRequest": {
             "type": "object",
             "properties": {
-                "content": {
-                    "type": "string"
-                },
                 "title": {
                     "type": "string"
                 }

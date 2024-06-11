@@ -1,8 +1,6 @@
 definitions:
   models.CreateDocumentRequest:
     properties:
-      content:
-        type: string
       title:
         type: string
     type: object
