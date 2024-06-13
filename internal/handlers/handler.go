@@ -17,11 +17,32 @@ func HandleViewDocument(c *gin.Context) {
 
 	if err == editor.ErrDocumentNotFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
 	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.HTML(http.StatusOK, "editor.html", document)
+}
+
+// creates and open a new document
+func HandleNewDocument(c *gin.Context) {
+	uuid := uuid.NewString()
+	document := models.Document{
+		UUID:    uuid,
+		Title:   "Untitled",
+		Version: 1,
+	}
+
+	err := editor.SaveDocument(document)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/documents/"+uuid)
 }
 
 // @Summary Create a new document

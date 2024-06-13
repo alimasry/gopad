@@ -13,6 +13,7 @@ import (
 
 // add routes for handler functions
 func AddRoutes(incommingRoutes *gin.Engine) {
+	incommingRoutes.GET("/documents/new", handlers.HandleNewDocument)
 	incommingRoutes.GET("/documents/:document_uuid", handlers.HandleViewDocument)
 	incommingRoutes.POST("/documents", handlers.HandleCreateDocument)
 
