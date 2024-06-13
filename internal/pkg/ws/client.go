@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/alimasry/gopad/internal/services/editor"
@@ -24,23 +25,27 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 
-	syncPeriod = 500 * time.Millisecond
+	// Time before documents are resynced
+	syncWait = 500 * time.Millisecond
 )
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type ClientList map[string]map[*Client]bool
 
 type Client struct {
-	ReplicaId         string
-	conn              *websocket.Conn
-	hub               *Hub
-	send              chan *Event
-	documentUUID      string
-	lastSyncedVersion int
+	ReplicaId     string
+	conn          *websocket.Conn
+	hub           *Hub
+	send          chan *Event
+	documentUUID  string
+	ActiveVersion int
 }
 
 // creates a new websocket client
@@ -69,7 +74,7 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				log.Println("Error occured", err.Error())
 			}
 			break
 		}
@@ -82,7 +87,7 @@ func (c *Client) routeMessage(message []byte) {
 	var event Event
 
 	if err := json.Unmarshal(message, &event); err != nil {
-		log.Printf("error: %v", err)
+		log.Println("Error occured", err.Error())
 	}
 
 	event.client = c
@@ -93,7 +98,7 @@ func (c *Client) routeMessage(message []byte) {
 // sends messages to the client
 func (c *Client) writePump() {
 	pingTicker := time.NewTicker(pingPeriod)
-	syncTicker := time.NewTicker(syncPeriod)
+	syncTicker := time.NewTicker(syncWait)
 
 	defer func() {
 		pingTicker.Stop()
@@ -112,12 +117,12 @@ func (c *Client) writePump() {
 
 			message, err := json.Marshal(event)
 			if err != nil {
-				log.Printf("error : %v", err)
+				log.Println("Error occured", err.Error())
 			}
 
 			err = c.conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
-				log.Printf("error : %v", err)
+				log.Println("Error occured", err.Error())
 			}
 		case <-pingTicker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -132,18 +137,22 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) syncIfChanged() {
-	document := editor.GetDocumentFromCache(c.documentUUID)
+	document, err := editor.GetDocumentFromCache(c.documentUUID)
 
-	if c.lastSyncedVersion == document.Version {
+	if err != nil {
+		log.Println("Error occured", err.Error())
+	}
+
+	if c.ActiveVersion == document.Version {
 		return
 	}
 
 	syncData, err := json.Marshal(document)
 	if err != nil {
-		log.Printf("error: %v", err)
+		log.Println("Error occured", err.Error())
 	}
 
-	c.lastSyncedVersion = document.Version
+	c.ActiveVersion = document.Version
 
 	c.send <- &Event{
 		Command: SyncEvent,
@@ -158,7 +167,7 @@ func ServeWs(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Error occured", err)
 		return
 	}
 

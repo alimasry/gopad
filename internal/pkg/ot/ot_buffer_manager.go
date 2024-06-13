@@ -42,7 +42,7 @@ func (otbm *OTBufferManager) GetOTBuffer(documentUUID string) *OTBuffer {
 func (otbm *OTBufferManager) ProcessTransformations() {
 	for {
 		for uuid := range otbm.OTBuffers {
-			otbm.OTBuffers[uuid].process()
+			go otbm.OTBuffers[uuid].process()
 		}
 	}
 }

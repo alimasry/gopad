@@ -9,6 +9,8 @@ var (
 	SyncEvent   = "sync_event"
 	InsertEvent = "insert_event"
 	DeleteEvent = "delete_event"
+	UndoEvent   = "undo_event"
+	RedoEvent   = "redo_event"
 )
 
 type Event struct {
@@ -33,14 +35,18 @@ func routeEvent(event Event) {
 	case InsertEvent:
 		var insertData InsertData
 		if err := json.Unmarshal(event.Data, &insertData); err != nil {
-			log.Printf("error: %v", err)
+			log.Println("Error occured", err.Error())
 		}
 		handleInsert(event.client, insertData)
 	case DeleteEvent:
 		var deleteData DeleteData
 		if err := json.Unmarshal(event.Data, &deleteData); err != nil {
-			log.Printf("error: %v", err)
+			log.Println("Error occured", err.Error())
 		}
 		handleDelete(event.client, deleteData)
+	case UndoEvent:
+		handleUndo(event.client)
+	case RedoEvent:
+		handleRedo(event.client)
 	}
 }

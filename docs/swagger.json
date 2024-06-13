@@ -1,0 +1,64 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "A collaborative text editor.",
+        "title": "GoPad Swagger API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "paths": {
+        "/documents": {
+            "post": {
+                "description": "takes title and content and create a new document",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "document"
+                ],
+                "summary": "Create a new document",
+                "parameters": [
+                    {
+                        "description": "title",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateDocumentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JSON Content",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateDocumentResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.CreateDocumentRequest": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateDocumentResponse": {
+            "type": "object",
+            "properties": {
+                "uuid": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
