@@ -38,6 +38,9 @@ func main() {
 
 	router := gin.Default()
 
+	// serve static files
+	router.Static("/static", "./static")
+
 	// load templates
 	router.LoadHTMLGlob("templates/*")
 

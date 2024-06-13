@@ -1,7 +1,10 @@
 package ws
 
 import (
+	"log"
+
 	"github.com/alimasry/gopad/internal/pkg/ot"
+	"github.com/alimasry/gopad/internal/services/editor"
 )
 
 var otBufferManager *ot.OTBufferManager = ot.GetOTBufferManager()
@@ -12,7 +15,7 @@ func handleInsert(client *Client, insertData InsertData) {
 	otBuffer.PushTransformation(ot.OTransformation{
 		Position:  insertData.Position,
 		Insert:    insertData.String,
-		Version:   client.lastSyncedVersion,
+		Version:   client.ActiveVersion,
 		ReplicaId: client.ReplicaId,
 	})
 }
@@ -23,7 +26,21 @@ func handleDelete(client *Client, deleteData DeleteData) {
 	otBuffer.PushTransformation(ot.OTransformation{
 		Position:  deleteData.Position,
 		Delete:    deleteData.Delete,
-		Version:   client.lastSyncedVersion,
+		Version:   client.ActiveVersion,
 		ReplicaId: client.ReplicaId,
 	})
+}
+
+func handleUndo(client *Client) {
+	err := editor.Undo(client.documentUUID)
+	if err != nil {
+		log.Println("Error occured: ", err)
+	}
+}
+
+func handleRedo(client *Client) {
+	err := editor.Redo(client.documentUUID)
+	if err != nil {
+		log.Println("Error occured: ", err)
+	}
 }

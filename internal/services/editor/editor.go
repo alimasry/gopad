@@ -49,6 +49,12 @@ func SaveDocument(document models.Document) error {
 
 	tx := db.Begin()
 
+	// clear redos
+	if err := tx.Where("uuid = ? AND version >= ?", document.UUID, document.Version).
+		Delete(&models.DocumentVersion{}).Error; err != nil {
+		return err
+	}
+
 	if err := tx.Save(&document).Error; err != nil {
 		tx.Rollback()
 		return ErrFailedToSaveDocument
@@ -68,6 +74,36 @@ func SaveDocument(document models.Document) error {
 	}
 
 	return tx.Commit().Error
+}
+
+// revert the latest changes
+func Undo(uuid string) error {
+	document, err := GetDocumentFromCache(uuid)
+	if err != nil {
+		return err
+	}
+
+	err = switchVersion(uuid, document.Version-1)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// re-add reverted changes
+func Redo(uuid string) error {
+	document, err := GetDocumentFromCache(uuid)
+	if err != nil {
+		return err
+	}
+
+	err = switchVersion(uuid, document.Version+1)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // get document from cache and add it if it isn't there
@@ -99,4 +135,29 @@ func addDocumentToCache(document models.Document) error {
 	}
 	DocumentCache.Set(document.UUID, documentJSON, defaultExpiration)
 	return nil
+}
+
+// switch active document version, mainly used for undo/redo
+func switchVersion(uuid string, version int) error {
+	db := database.GetDb()
+	tx := db.Begin()
+
+	var nextDocument models.Document
+	if err := tx.Model(&models.DocumentVersion{}).Select(`
+		uuid, title, content, size, version
+	`).Where("uuid = ? AND version = ?", uuid, version).Scan(&nextDocument).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Save(&nextDocument).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := addDocumentToCache(nextDocument); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }

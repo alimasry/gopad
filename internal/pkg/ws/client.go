@@ -40,12 +40,12 @@ var upgrader = websocket.Upgrader{
 type ClientList map[string]map[*Client]bool
 
 type Client struct {
-	ReplicaId         string
-	conn              *websocket.Conn
-	hub               *Hub
-	send              chan *Event
-	documentUUID      string
-	lastSyncedVersion int
+	ReplicaId     string
+	conn          *websocket.Conn
+	hub           *Hub
+	send          chan *Event
+	documentUUID  string
+	ActiveVersion int
 }
 
 // creates a new websocket client
@@ -143,7 +143,7 @@ func (c *Client) syncIfChanged() {
 		log.Println("Error occured", err.Error())
 	}
 
-	if c.lastSyncedVersion == document.Version {
+	if c.ActiveVersion == document.Version {
 		return
 	}
 
@@ -152,7 +152,7 @@ func (c *Client) syncIfChanged() {
 		log.Println("Error occured", err.Error())
 	}
 
-	c.lastSyncedVersion = document.Version
+	c.ActiveVersion = document.Version
 
 	c.send <- &Event{
 		Command: SyncEvent,
