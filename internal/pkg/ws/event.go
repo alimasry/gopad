@@ -44,9 +44,9 @@ func routeEvent(event Event) {
 			log.Println("Error occured", err.Error())
 		}
 		handleDelete(event.client, deleteData)
-	case UndoEvent:
-		handleUndo(event.client)
-	case RedoEvent:
-		handleRedo(event.client)
+	// case UndoEvent:
+	// 	handleUndo(event.client)
+	// case RedoEvent:
+	// 	handleRedo(event.client)
 	}
 }

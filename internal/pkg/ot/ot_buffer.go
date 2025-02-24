@@ -73,7 +73,7 @@ func (otb *OTBuffer) save() error {
 }
 
 // process transformations related to that buffer
-func (otb *OTBuffer) process() {
+func (otb *OTBuffer) Process() {
 	if len(otb.Pending) == 0 {
 		return
 	}
