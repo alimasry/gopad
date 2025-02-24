@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/alimasry/gopad/internal/models"
-  "github.com/alimasry/gopad/internal/services/document"
+	"github.com/alimasry/gopad/internal/services/document"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
