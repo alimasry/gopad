@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/alimasry/gopad/internal/models"
-	"github.com/alimasry/gopad/internal/services/editor"
+  "github.com/alimasry/gopad/internal/services/document"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -13,9 +13,9 @@ import (
 func HandleViewDocument(c *gin.Context) {
 	document_uuid := c.Param("document_uuid")
 
-	document, err := editor.GetDocumentFromCache(document_uuid)
+	doc, err := document.GetDocumentFromCache(document_uuid)
 
-	if err == editor.ErrDocumentNotFound {
+	if err == document.ErrDocumentNotFound {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	} else if err != nil {
@@ -23,19 +23,19 @@ func HandleViewDocument(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "editor.html", document)
+	c.HTML(http.StatusOK, "editor.html", doc)
 }
 
 // creates and open a new document
 func HandleNewDocument(c *gin.Context) {
 	uuid := uuid.NewString()
-	document := models.Document{
+	doc := models.Document{
 		UUID:    uuid,
 		Title:   "Untitled",
 		Version: 1,
 	}
 
-	err := editor.SaveDocument(document)
+	err := document.SaveDocument(doc)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -61,18 +61,18 @@ func HandleCreateDocument(c *gin.Context) {
 		return
 	}
 
-	document := models.Document{
+	doc := models.Document{
 		UUID:    uuid.NewString(),
 		Title:   body.Title,
 		Version: 1,
 	}
 
-	err := editor.SaveDocument(document)
+	err := document.SaveDocument(doc)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"uuid": document.UUID})
+	c.JSON(http.StatusOK, gin.H{"uuid": doc.UUID})
 }

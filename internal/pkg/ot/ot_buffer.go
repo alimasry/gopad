@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/alimasry/gopad/internal/pkg/gapbuffer"
-	"github.com/alimasry/gopad/internal/services/editor"
+	"github.com/alimasry/gopad/internal/services/document"
 )
 
 type OTBufferMap map[string]*OTBuffer
@@ -20,16 +20,16 @@ type OTBuffer struct {
 
 // creates a new OTBuffer
 func NewOTBuffer(documentUUID string) *OTBuffer {
-	document, err := editor.GetDocumentFromCache(documentUUID)
+	doc, err := document.GetDocumentFromCache(documentUUID)
 
 	if err != nil {
 		log.Println("Error occured", err.Error())
 	}
 
 	return &OTBuffer{
-		UUID:      document.UUID,
-		Version:   document.Version,
-		gapBuffer: gapbuffer.NewGapBufferWithContent(document.Content),
+		UUID:      doc.UUID,
+		Version:   doc.Version,
+		gapBuffer: gapbuffer.NewGapBufferWithContent(doc.Content),
 		Pending:   make([]OTransformation, 0),
 	}
 }
@@ -53,15 +53,15 @@ func (otb *OTBuffer) Content() string {
 
 // save the document to the database
 func (otb *OTBuffer) save() error {
-	document, err := editor.GetDocument(otb.UUID)
+	doc, err := document.GetDocument(otb.UUID)
 	if err != nil {
 		return err
 	}
 
-	document.Version = otb.Version + 1
-	document.Content = otb.Content()
+	doc.Version = otb.Version + 1
+	doc.Content = otb.Content()
 
-	err = editor.SaveDocument(document)
+	err = document.SaveDocument(doc)
 
 	if err != nil {
 		return err

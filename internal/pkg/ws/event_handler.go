@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/alimasry/gopad/internal/pkg/editor"
+	"github.com/alimasry/gopad/internal/services/document"
 )
 
 var (
@@ -67,6 +68,21 @@ func handleDelete(client *Client, deleteData DeleteData) {
 	})
 
 	if err != nil {
+		log.Printf("Error processing edit: %v", err)
+	}
+}
+
+func handleUndo(client *Client) {
+	err := document.Undo(client.documentUUID)
+	if err != nil {
+		log.Println("Error occured: ", err)
+	}
+}
+
+func handleRedo(client *Client) {
+	err := document.Redo(client.documentUUID)
+	if err != nil {
+		log.Println("Error occured: ", err)
 		log.Printf("Error processing edit: %v", err)
 	}
 }

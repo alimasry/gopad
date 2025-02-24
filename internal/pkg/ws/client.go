@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/alimasry/gopad/internal/services/editor"
+	"github.com/alimasry/gopad/internal/services/document"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -137,22 +137,22 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) syncIfChanged() {
-	document, err := editor.GetDocumentFromCache(c.documentUUID)
+	doc, err := document.GetDocumentFromCache(c.documentUUID)
 
 	if err != nil {
 		log.Println("Error occured", err.Error())
 	}
 
-	if c.ActiveVersion == document.Version {
+	if c.ActiveVersion == doc.Version {
 		return
 	}
 
-	syncData, err := json.Marshal(document)
+	syncData, err := json.Marshal(doc)
 	if err != nil {
 		log.Println("Error occured", err.Error())
 	}
 
-	c.ActiveVersion = document.Version
+	c.ActiveVersion = doc.Version
 
 	c.send <- &Event{
 		Command: SyncEvent,
