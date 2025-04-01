@@ -1,148 +1,179 @@
-function getUUIDFromURL() {
-    const pathname = window.location.pathname;
-    const segments = pathname.split('/');
-    return segments[2];
-}
+class CollaborativeEditor {
+    constructor() {
+        this.uuid = this.getUUIDFromURL();
+        this.editor = document.getElementById('textEditor');
+        this.undoButton = document.getElementById('undoButton');
+        this.redoButton = document.getElementById('redoButton');
+        this.socket = null;
+        this.retryInterval = 1000;
+        this.isProcessingServerUpdate = false;
+        
+        // Buffer for batching operations
+        this.buffer = {
+            operation: '',
+            position: 0,
+            string: '',
+            delete: 0,
+            timeoutId: null
+        };
 
-const uuid = getUUIDFromURL();
-const editor = document.getElementById('textEditor');
-const undoButton = document.getElementById('undoButton');
-const redoButton = document.getElementById('redoButton');
-let socket;
-let isConnected = false;
+        this.EDIT_DEBOUNCE_MS = 300;
 
-function connectWebSocket() {
-    socket = new WebSocket('ws://localhost:8080/documents/' + uuid + '/ws');
-    socket.onopen = function (event) {
-        console.log('WebSocket is connected.');
-        retryInterval = 1000;
-    };
+        this.setupEventListeners();
+        this.connectWebSocket();
+    }
 
-    socket.onmessage = function (event) {
-        const ev = JSON.parse(event.data);
-        console.log(ev);
-        document.title = ev.Data.Title;
-        editor.value = ev.Data.Content;
-        console.log('Message from server ', event.data);
-    };
+    getUUIDFromURL() {
+        const pathname = window.location.pathname;
+        const segments = pathname.split('/');
+        return segments[2];
+    }
 
-    socket.onclose = function (event) {
-        console.log('WebSocket closed. Attempting to reconnect...', event.reason);
-        setTimeout(() => {
-            connectWebSocket();
-        }, retryInterval);
-        retryInterval = Math.min(2 * retryInterval, 30000);
-    };
+    setupEventListeners() {
+        this.editor.addEventListener('input', (e) => {
+            if (!this.isProcessingServerUpdate) {
+                this.handleInput(e);
+            }
+        });
+        this.editor.addEventListener('keydown', this.handleKeydown.bind(this));
+        this.undoButton.addEventListener('click', () => this.handleUndoRedoOperation('undo_event'));
+        this.redoButton.addEventListener('click', () => this.handleUndoRedoOperation('redo_event'));
+    }
 
-    socket.onerror = function (event) {
-        console.error('WebSocket error observed:', event);
-    };
-}
+    connectWebSocket() {
+        this.socket = new WebSocket(`ws://localhost:8080/documents/${this.uuid}/ws`);
+        
+        this.socket.onopen = () => {
+            console.log('WebSocket connected');
+            this.retryInterval = 1000;
+        };
 
-connectWebSocket();
+        this.socket.onmessage = (event) => {
+            const ev = JSON.parse(event.data);
+            this.handleServerUpdate(ev);
+        };
 
-const buffer = {
-    operation: '',
-    position: 0,
-    string: '',
-    delete: 0,
-    timeoutId: null
-};
+        this.socket.onclose = (event) => {
+            console.log('WebSocket closed. Attempting to reconnect...', event.reason);
+            setTimeout(() => this.connectWebSocket(), this.retryInterval);
+            this.retryInterval = Math.min(2 * this.retryInterval, 30000);
+        };
 
-function sendBuffer() {
-    if (!buffer.operation) return;
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
 
-    const payload = JSON.stringify({
-        command: buffer.operation,
-        uuid: uuid,
-        data: {
-            position: buffer.position,
-            string: buffer.string,
-            delete: buffer.delete
+    handleServerUpdate(ev) {
+        if (!ev.Data) return;
+
+        this.isProcessingServerUpdate = true;
+        
+        // Update title if it's changed
+        if (ev.Data.Title) {
+            document.title = ev.Data.Title;
         }
-    });
 
-    socket.send(payload);
-    resetBuffer();
-}
-
-function resetBuffer() {
-    buffer.operation = '';
-    buffer.position = 0;
-    buffer.string = '';
-    buffer.delete = 0;
-    if (buffer.timeoutId) {
-        clearTimeout(buffer.timeoutId);
-    }
-    buffer.timeoutId = null;
-}
-
-editor.addEventListener('input', function (event) {
-    const { inputType, data } = event;
-    const currentPosition = editor.selectionStart;
-
-    if (buffer.timeoutId) {
-        clearTimeout(buffer.timeoutId);
-    }
-    buffer.timeoutId = null;
-
-    if (inputType === 'insertText' || inputType === 'insertFromPaste') {
-        handleInsertOperation(data, currentPosition);
-    } else if (inputType === 'deleteContentBackward') {
-        handleDeleteOperation(currentPosition);
-    } else {
-        sendBuffer();
+        // Only update content if it's a sync event
+        if (ev.Command === 'sync_event' && ev.Data.Content !== undefined) {
+            const currentPosition = this.editor.selectionStart;
+            this.editor.value = ev.Data.Content;
+            this.editor.selectionStart = this.editor.selectionEnd = currentPosition;
+        }
+        
+        this.isProcessingServerUpdate = false;
     }
 
-    buffer.timeoutId = setTimeout(sendBuffer, 300);
-});
+    handleInput(event) {
+        const { inputType, data } = event;
+        const currentPosition = this.editor.selectionStart;
 
-editor.addEventListener('keydown', function (event) {
-    const currentPosition = editor.selectionStart;
-    if (event.key === 'Enter') {
-        handleInsertOperation("\n", currentPosition + 1);
+        if (this.buffer.timeoutId) {
+            clearTimeout(this.buffer.timeoutId);
+        }
+
+        if (inputType === 'insertText' || inputType === 'insertFromPaste') {
+            this.handleInsertOperation(data, currentPosition);
+        } else if (inputType === 'deleteContentBackward') {
+            this.handleDeleteOperation(currentPosition);
+        } else {
+            this.sendBuffer();
+        }
+
+        this.buffer.timeoutId = setTimeout(() => this.sendBuffer(), this.EDIT_DEBOUNCE_MS);
     }
-});
 
-function handleInsertOperation(data, currentPosition) {
-    if (buffer.operation === 'insert_event' && buffer.position + buffer.string.length === currentPosition - 1) {
-        buffer.string += data;
-    } else {
-        sendBuffer();
-        buffer.operation = 'insert_event';
-        buffer.position = currentPosition - 1;
-        buffer.string = data;
-        buffer.delete = 0;
+    handleInsertOperation(data, currentPosition) {
+        if (this.buffer.operation === 'insert_event' && 
+            this.buffer.position + this.buffer.string.length === currentPosition - 1) {
+            // Combine with previous insert
+            this.buffer.string += data;
+        } else {
+            this.sendBuffer();
+            this.buffer.operation = 'insert_event';
+            this.buffer.position = currentPosition - 1;
+            this.buffer.string = data;
+            this.buffer.delete = 0;
+        }
+    }
+
+    handleDeleteOperation(currentPosition) {
+        if (this.buffer.operation === 'delete_event' && 
+            this.buffer.position === currentPosition) {
+            // Combine with previous delete
+            this.buffer.delete++;
+        } else {
+            this.sendBuffer();
+            this.buffer.operation = 'delete_event';
+            this.buffer.position = currentPosition;
+            this.buffer.string = '';
+            this.buffer.delete = 1;
+        }
+    }
+
+    handleKeydown(event) {
+        if (event.key === 'Enter') {
+            const currentPosition = this.editor.selectionStart;
+            this.handleInsertOperation("\n", currentPosition + 1);
+        }
+    }
+
+    handleUndoRedoOperation(operation) {
+        this.sendBuffer();
+        this.buffer.operation = operation;
+        this.sendBuffer();
+    }
+
+    sendBuffer() {
+        if (!this.buffer.operation) return;
+
+        const payload = JSON.stringify({
+            command: this.buffer.operation,
+            data: {
+                position: this.buffer.position,
+                string: this.buffer.string,
+                delete: this.buffer.delete
+            }
+        });
+
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(payload);
+        }
+
+        this.resetBuffer();
+    }
+
+    resetBuffer() {
+        this.buffer.operation = '';
+        this.buffer.position = 0;
+        this.buffer.string = '';
+        this.buffer.delete = 0;
+        if (this.buffer.timeoutId) {
+            clearTimeout(this.buffer.timeoutId);
+        }
+        this.buffer.timeoutId = null;
     }
 }
 
-function handleDeleteOperation(currentPosition) {
-    if (buffer.operation === 'delete_event' && buffer.position === currentPosition) {
-        buffer.delete++;
-    } else {
-        sendBuffer();
-        buffer.operation = 'delete_event';
-        buffer.position = currentPosition;
-        buffer.string = '';
-        buffer.delete = 1;
-    }
-}
-
-function handleUndoRedoOperation(operation) {
-    sendBuffer();
-    buffer.operation = operation;
-    sendBuffer();
-}
-
-function insertString(original, insert, index) {
-    if (insert == undefined) return original;
-    return original.substring(0, index) + insert + original.substring(index);
-}
-
-function removeFromString(original, count, index) {
-    const to = Math.max(index - count + 1, 0);
-    return original.substring(0, to) + original.substring(index + 1);
-}
-
-undoButton.addEventListener('click', () => handleUndoRedoOperation('undo_event'));
-redoButton.addEventListener('click', () => handleUndoRedoOperation('redo_event'));
+// Initialize the editor
+const collaborativeEditor = new CollaborativeEditor();
